@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import { connectDB } from "./utils/connectDb";
 import userRoutes from "./routes/userRoute";
+import { errorHandler } from "./middlewares/errorHandler";
 
 dotenv.config();
 
@@ -21,6 +22,9 @@ app.use("/api/users", userRoutes);
 app.get("/", (req: Request, res: Response) => {
   res.send("Express + TypeScript Server");
 });
+
+// Global error handler
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
