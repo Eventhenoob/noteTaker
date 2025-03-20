@@ -1,5 +1,6 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 import { connectDB } from "./utils/connectDb";
 import userRoutes from "./routes/userRoute";
 import folderRoutes from "./routes/folderRoutes";
@@ -16,6 +17,7 @@ connectDB();
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 
 // Routes
 app.use("/api/users", userRoutes);
