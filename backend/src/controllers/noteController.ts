@@ -26,20 +26,41 @@ export const getNoteById = asyncHandler(async (req: Request, res: Response) => {
 
 // Create a new note
 export const createNote = asyncHandler(async (req: Request, res: Response) => {
-  const { title, content } = req.body;
+  const { title, content, parentFolder } = req.body;
+
+  // If parentFolder is provided, verify it exists and belongs to the user
+  if (parentFolder) {
+    const folder = await Folder.findOne({
+      _id: parentFolder,
+      user: req.user._id,
+    });
+
+    if (!folder) {
+      res.status(404);
+      throw new Error("Parent folder not found or access denied");
+    }
+  }
 
   const note = await Note.create({
     user: req.user._id,
     title,
     content,
+    parentFolder,
   });
+
+  // If note has a parent folder, add note to folder's files array
+  if (parentFolder) {
+    await Folder.findByIdAndUpdate(parentFolder, {
+      $push: { files: note._id },
+    });
+  }
 
   res.status(201).json(note);
 });
 
 // Update a note
 export const updateNote = asyncHandler(async (req: Request, res: Response) => {
-  const { title, content } = req.body;
+  const { title, content, parentFolder } = req.body;
 
   const note = await Note.findOne({
     _id: req.params.id,
@@ -51,8 +72,39 @@ export const updateNote = asyncHandler(async (req: Request, res: Response) => {
     throw new Error("Note not found");
   }
 
+  // If parentFolder is provided and different from current, verify it exists
+  if (parentFolder && parentFolder !== note.parentFolder?.toString()) {
+    const folder = await Folder.findOne({
+      _id: parentFolder,
+      user: req.user._id,
+    });
+
+    if (!folder) {
+      res.status(404);
+      throw new Error("Parent folder not found or access denied");
+    }
+
+    // Remove note from old folder's files array if it had a parent
+    if (note.parentFolder) {
+      await Folder.findByIdAndUpdate(note.parentFolder, {
+        $pull: { files: note._id },
+      });
+    }
+
+    // Add note to new folder's files array
+    await Folder.findByIdAndUpdate(parentFolder, {
+      $push: { files: note._id },
+    });
+  } else if (!parentFolder) {
+    if (note.parentFolder) {
+      await Folder.findByIdAndUpdate(note.parentFolder, {
+        $pull: { files: note._id },
+      });
+    }
+  }
   note.title = title || note.title;
   note.content = content || note.content;
+  note.parentFolder = parentFolder;
 
   const updatedNote = await note.save();
   res.json(updatedNote);

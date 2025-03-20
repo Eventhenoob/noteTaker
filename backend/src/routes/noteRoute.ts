@@ -14,6 +14,6 @@ const router = express.Router();
 router.use(protect);
 
 router.route("/").get(getNotes).post(createNote);
-router.route("/:id").get(getNoteById).put(updateNote).delete(deleteNote);
+router.route("/:id").get(getNoteById).post(updateNote).delete(deleteNote);
 
 export default router;
