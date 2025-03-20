@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Note } from "../models/noteModel";
 import { asyncHandler } from "../middlewares/asyncHandler";
+import { Folder } from "../models/folderModel";
 
 // Get all notes for the authenticated user
 export const getNotes = asyncHandler(async (req: Request, res: Response) => {
@@ -59,7 +60,7 @@ export const updateNote = asyncHandler(async (req: Request, res: Response) => {
 
 // Delete a note
 export const deleteNote = asyncHandler(async (req: Request, res: Response) => {
-  const note = await Note.findOneAndDelete({
+  const note = await Note.findOne({
     _id: req.params.id,
     user: req.user._id,
   });
@@ -68,6 +69,16 @@ export const deleteNote = asyncHandler(async (req: Request, res: Response) => {
     res.status(404);
     throw new Error("Note not found");
   }
+
+  // If note has a parent folder, remove note from folder's files array
+  if (note.parentFolder) {
+    await Folder.findByIdAndUpdate(note.parentFolder, {
+      $pull: { files: note._id },
+    });
+  }
+
+  // Delete the note
+  await note.deleteOne();
 
   res.json({ message: "Note deleted successfully" });
 });
